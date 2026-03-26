@@ -4,11 +4,13 @@
 
 import io
 import os
+import random
 import re
 import tempfile
 import zipfile
 from pathlib import Path
 from typing import List, Literal, Optional
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -25,6 +27,43 @@ except Exception:
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+HERO_IMAGES: list[str] = [
+    "https://www.kkk.tsk.tr/img/default/galeri/001.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/005.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/010.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/015.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/020.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/025.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/030.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/035.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/040.jpg",
+    "https://www.kkk.tsk.tr/img/default/galeri/045.jpg",
+]
+
+
+@app.get("/hero")
+def hero(r: int = Query(0, description="Cache-bust")):
+    # Görseli backend üzerinden çekip tarayıcıya servis ediyoruz (hotlink/CORS sorunlarını aşmak için)
+    img_url = random.choice(HERO_IMAGES)
+    req = Request(
+        img_url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) BedelliMP3Indirici/1.0",
+            "Referer": "https://www.kkk.tsk.tr/default/galeri.aspx",
+        },
+    )
+    with urlopen(req, timeout=20) as resp:
+        data = resp.read()
+        content_type = resp.headers.get_content_type() or "image/jpeg"
+
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 def sanitize(name: str) -> str:

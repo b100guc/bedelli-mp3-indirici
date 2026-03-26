@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
 
 type Format = "mp3" | "mp4";
@@ -20,18 +20,7 @@ type InfoResponse = {
   items: VideoItem[];
 };
 
-const HERO_IMAGES: string[] = [
-  "https://www.kkk.tsk.tr/img/default/galeri/001.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/005.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/010.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/015.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/020.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/025.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/030.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/035.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/040.jpg",
-  "https://www.kkk.tsk.tr/img/default/galeri/045.jpg",
-];
+
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -45,11 +34,18 @@ export default function Home() {
   const [infoType, setInfoType] = useState<InfoResponse["type"] | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [infoLoading, setInfoLoading] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
-  const heroImage = useMemo(
-    () => HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)],
-    []
-  );
+  const heroImage = useMemo(() => `/api/hero?r=${Math.floor(Math.random() * 1e9)}`, []);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHelpOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [helpOpen]);
 
   const validateUrl = () => {
     const trimmed = url.trim();
@@ -194,15 +190,20 @@ export default function Home() {
     <main className={styles.main}>
       <div className={styles.card}>
         <div className={styles.hero}>
-          <img
-            src={heroImage}
-            alt="TSK fotoğraf galerisi"
-            className={styles.heroImage}
-            loading="lazy"
-          />
+          <img src={heroImage} alt="TSK fotoğraf galerisi" className={styles.heroImage} />
         </div>
-        <h1 className={styles.title}>Bedelli MP3 İndirici</h1>
-        <p className={styles.subtitle}>Askeri temalı YouTube ses indirici</p>
+        <div className={styles.headerRow}>
+          <h1 className={styles.title}>Bedelli MP3 İndirici</h1>
+          <button
+            type="button"
+            className={styles.helpButton}
+            onClick={() => setHelpOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={helpOpen}
+          >
+            Yardım
+          </button>
+        </div>
 
         <label className={styles.label}>YouTube Linki</label>
         <input
@@ -281,19 +282,22 @@ export default function Home() {
                   : "Tek video"}
               </span>
               {items.length > 1 && (
-                <button
-                  type="button"
-                  className={styles.listToggle}
-                  onClick={() => {
-                    if (selectedIds.length === items.length) {
-                      setSelectedIds([]);
-                    } else {
-                      setSelectedIds(items.map((i) => i.id));
-                    }
-                  }}
-                >
-                  {selectedIds.length === items.length ? "Seçimi temizle" : "Tümünü seç"}
-                </button>
+                <div className={styles.listActions}>
+                  <button
+                    type="button"
+                    className={styles.listToggle}
+                    onClick={() => setSelectedIds(items.map((i) => i.id))}
+                  >
+                    Tümünü seç
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.listToggle}
+                    onClick={() => setSelectedIds([])}
+                  >
+                    Seçimi temizle
+                  </button>
+                </div>
               )}
             </div>
 
@@ -343,7 +347,102 @@ export default function Home() {
             </ul>
           </div>
         )}
+
+        <footer className={styles.footer}>
+          <div className={styles.footerEmblems}>
+            <img
+              className={styles.footerEmblem}
+              src="https://upload.wikimedia.org/wikipedia/tr/f/f3/T%C3%BCrk_Kara_Kuvvetleri_amblemi.png"
+              alt="Türk Kara Kuvvetleri arması"
+              loading="lazy"
+            />
+            <img
+              className={styles.footerEmblem}
+              src="https://upload.wikimedia.org/wikipedia/tr/7/70/T%C3%BCrk_Hava_Kuvvetleri_armas%C4%B1.png?_=20130718142212"
+              alt="Türk Hava Kuvvetleri arması"
+              loading="lazy"
+            />
+            <img
+              className={styles.footerEmblem}
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Seal_of_the_Turkish_Navy.svg/1280px-Seal_of_the_Turkish_Navy.svg.png"
+              alt="Türk Deniz Kuvvetleri arması"
+              loading="lazy"
+            />
+          </div>
+          <a
+            className={styles.footerCredit}
+            href="https://github.com/b100guc"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Designed by b100guc
+          </a>
+        </footer>
       </div>
+
+      {helpOpen && (
+        <div
+          className={styles.helpOverlay}
+          onClick={() => setHelpOpen(false)}
+          role="presentation"
+        >
+          <aside
+            className={styles.helpDrawer}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Kullanım Rehberi"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.helpTop}>
+              <div>
+                <div className={styles.helpTitle}>Kullanım Rehberi</div>
+                <div className={styles.helpSubtitle}>3 adımda hızlı indirme</div>
+              </div>
+              <button
+                type="button"
+                className={styles.helpClose}
+                onClick={() => setHelpOpen(false)}
+                aria-label="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.helpBody}>
+              <ol className={styles.helpList}>
+                <li>
+                  <b>Linki yapıştır</b>
+                  <div className={styles.helpText}>
+                    Video veya oynatma listesi linkini üstteki alana gir.
+                  </div>
+                </li>
+                <li>
+                  <b>Bul</b>
+                  <div className={styles.helpText}>
+                    Sistem tek parça mı playlist mi anlar ve aşağıda listeyi çıkarır.
+                  </div>
+                </li>
+                <li>
+                  <b>İndir</b>
+                  <div className={styles.helpText}>
+                    Tek parça için satırdaki <b>İndir</b>. Çoklu seçim için{" "}
+                    <b>Seçilenleri indir</b> → <b>ZIP</b>.
+                  </div>
+                </li>
+              </ol>
+
+              <div className={styles.helpTipBox}>
+                <div className={styles.helpTipTitle}>İpuçları</div>
+                <ul className={styles.helpTips}>
+                  <li>Formatı (MP3/MP4) indirmeden önce seç.</li>
+                  <li>Playlist’te checkbox ile seçim yapabilirsin.</li>
+                  <li>Paneli kapatmak için ESC’ye basabilirsin.</li>
+                </ul>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
