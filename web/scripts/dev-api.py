@@ -29,16 +29,8 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 HERO_IMAGES: list[str] = [
-    "https://www.kkk.tsk.tr/img/default/galeri/001.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/005.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/010.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/015.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/020.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/025.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/030.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/035.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/040.jpg",
-    "https://www.kkk.tsk.tr/img/default/galeri/045.jpg",
+    f"https://www.kkk.tsk.tr/img/default/galeri/{i:03d}.jpg"
+    for i in range(1, 83)
 ]
 
 

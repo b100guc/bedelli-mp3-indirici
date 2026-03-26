@@ -1,30 +1,8 @@
 import json
-import os
-import base64
-import tempfile
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 import yt_dlp
-
-def load_cookiefile_from_env() -> str | None:
-    cookies_b64 = os.getenv("YTDLP_COOKIES_B64", "").strip()
-    cookies_txt = os.getenv("YTDLP_COOKIES_TXT", "").strip()
-    if not cookies_b64 and not cookies_txt:
-        return None
-    raw = b""
-    try:
-        if cookies_b64:
-            raw = base64.b64decode(cookies_b64)
-        else:
-            raw = cookies_txt.encode("utf-8")
-    except Exception:
-        return None
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    tmp.write(raw)
-    tmp.flush()
-    tmp.close()
-    return tmp.name
 
 
 class handler(BaseHTTPRequestHandler):
@@ -40,19 +18,10 @@ class handler(BaseHTTPRequestHandler):
             self._send_text(400, "Geçerli YouTube linki girin")
             return
 
-        cookiefile = load_cookiefile_from_env()
         ydl_opts = {
             "quiet": True,
             "skip_download": True,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
-            },
-            "extractor_args": {
-                "youtube": {"player_client": ["web", "android", "ios"]},
-            },
         }
-        if cookiefile:
-            ydl_opts["cookiefile"] = cookiefile
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -113,12 +82,6 @@ class handler(BaseHTTPRequestHandler):
             self._send_text(400, msg)
         except Exception as e:
             self._send_text(500, f"Sunucu hatası: {str(e)}")
-        finally:
-            if cookiefile and os.path.exists(cookiefile):
-                try:
-                    os.remove(cookiefile)
-                except Exception:
-                    pass
 
     def _send_text(self, code: int, text: str):
         body = text.encode("utf-8")

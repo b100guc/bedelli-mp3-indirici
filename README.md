@@ -1,74 +1,95 @@
 # Bedelli MP3 İndirici
 
-Askeri temalı arayüzle YouTube linklerini analiz eden, parçaları listeleyen ve tekli/çoklu indirme yapan web uygulaması.
+Askeri temalı YouTube video/playlist indirici. Linki yapıştır, parçaları listele, tek tek veya toplu ZIP olarak indir.
 
-## Özellikler
+## Gereksinimler
 
-- YouTube video veya oynatma listesi linkini analiz etme (`Bul`)
-- Parçaları tek tek indirme
-- Seçilen parçaları tek dosyada indirme (`parcalar.zip`)
-- MP3 / MP4 format seçimi
-- Sağ panelde kullanım rehberi (yardım popup)
-- Üst bölümde her girişte rastgele askeri görsel
+- **Python 3.10+**
+- **Node.js 18+**
+- **FFmpeg** (MP3 dönüşümü ve video birleştirme için)
+  - Windows: `winget install ffmpeg`
+  - macOS: `brew install ffmpeg`
+  - Linux: `sudo apt install ffmpeg`
 
-## Teknolojiler
-
-- Frontend: Next.js (App Router)
-- Backend: FastAPI + `yt-dlp` (Railway)
-- Donusturme: ffmpeg
-
-## Proje Yapısı
-
-```text
-web/                   # Next.js frontend (Vercel)
-backend/               # FastAPI backend (Railway)
-```
-
-## Yerelde Çalıştırma
-
-Yerelde 2 servis:
-
-1) Backend (`http://127.0.0.1:8000`)
-2) UI (`http://localhost:3000`)
-
-### 1) Backend
+## Kurulum
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+git clone https://github.com/b100guc/bedelli-mp3-indirici.git
+cd bedelli-mp3-indirici
 ```
 
-### 2) UI
+### Python bağımlılıkları
+
+```bash
+cd web
+pip install -r requirements.txt
+```
+
+### Node.js bağımlılıkları
 
 ```bash
 cd web
 npm install
-set NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+```
+
+## Çalıştırma
+
+**İki ayrı terminal** açın, ikisi de `web` klasöründe:
+
+### Terminal 1 — API sunucusu (Python)
+
+```bash
+cd web
+python -m uvicorn scripts.dev-api:app --reload --port 3002
+```
+
+Çıktıda `Uvicorn running on http://127.0.0.1:3002` görmelisiniz.
+
+### Terminal 2 — Arayüz (Next.js)
+
+```bash
+cd web
 npm run dev
 ```
 
-## Kullanım Akışı
+Çıktıda `Ready on http://localhost:3000` görmelisiniz.
 
-1. YouTube linkini yapıştır.
-2. `Bul` ile listeyi getir.
-3. Parça seç:
-   - Satırdaki `İndir` => tek dosya
-   - `Seçilenleri indir` => `parcalar.zip`
+### Tarayıcıda aç
 
-## Deploy (Vercel + Railway)
+```
+http://localhost:3000
+```
 
-1. Railway'de backend deploy et (`backend` root).
-2. Domain al (`https://....up.railway.app`).
-3. Vercel'de frontend deploy et (`web` root).
-4. Vercel env:
-   - `NEXT_PUBLIC_API_BASE=https://....up.railway.app`
+## Kullanım
 
-## YouTube "not a bot" (cookies) ayarı
+1. **Link yapıştır** — YouTube video veya oynatma listesi URL'sini girin.
+2. **Bul** — Parçalar listelenir (tek video ise 1 satır, playlist ise tümü).
+3. **Format seç** — MP3 (320kbps ses) veya MP4 (video).
+4. **İndir** — Satırdaki "İndir" ile tek parça, "Seçilenleri indir" ile seçilenleri ZIP olarak indirin.
 
-YouTube bazı IP'lerde doğrulama isteyebilir. Bunu azaltmak için Railway backend env'e aşağıdaki değişkenlerden birini ekleyebilirsin:
+## Proje Yapısı
 
-- `YTDLP_COOKIES_B64` (önerilen): `cookies.txt` dosyasının Base64 hali
-- `YTDLP_COOKIES_TXT`: `cookies.txt` içeriğinin düz metni
+```
+web/
+├── app/              # Next.js arayüzü (page.tsx, globals.css, ...)
+├── api/              # Vercel Python serverless fonksiyonları
+│   ├── download.py   # Tek parça indirme
+│   ├── download-batch.py  # Toplu ZIP indirme
+│   ├── info.py       # Video/playlist bilgi alma
+│   └── hero.py       # Rastgele askeri görsel proxy
+├── scripts/
+│   └── dev-api.py    # Yerel geliştirme API sunucusu (FastAPI)
+├── requirements.txt  # Python bağımlılıkları
+└── package.json      # Node.js bağımlılıkları
+```
 
-Backend endpoint'leri (`/info`, `/download`, `/download-batch`) bu env'leri otomatik kullanır.
+## Vercel Deploy
+
+1. GitHub'a pushlayın.
+2. [vercel.com](https://vercel.com) → New Project → Repo seçin.
+3. **Root Directory:** `web`
+4. Deploy.
+
+## Lisans
+
+MIT

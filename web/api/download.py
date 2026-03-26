@@ -4,7 +4,6 @@
 import os
 import re
 import tempfile
-import base64
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -20,27 +19,6 @@ except Exception:
 
 def sanitize(name: str) -> str:
     return re.sub(r'[<>:"/\\|?*]', "_", name)[:200].strip() or "download"
-
-def load_cookiefile_from_env() -> str | None:
-    cookies_b64 = os.getenv("YTDLP_COOKIES_B64", "").strip()
-    cookies_txt = os.getenv("YTDLP_COOKIES_TXT", "").strip()
-    if not cookies_b64 and not cookies_txt:
-        return None
-
-    raw = b""
-    try:
-        if cookies_b64:
-            raw = base64.b64decode(cookies_b64)
-        else:
-            raw = cookies_txt.encode("utf-8")
-    except Exception:
-        return None
-
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    tmp.write(raw)
-    tmp.flush()
-    tmp.close()
-    return tmp.name
 
 
 class handler(BaseHTTPRequestHandler):
@@ -63,21 +41,12 @@ class handler(BaseHTTPRequestHandler):
         tmp_dir = tempfile.mkdtemp()
         out_tmpl = os.path.join(tmp_dir, "%(title)s.%(ext)s")
 
-        cookiefile = load_cookiefile_from_env()
         ydl_opts = {
             "outtmpl": out_tmpl,
             "noplaylist": True,
             "quiet": True,
             "ffmpeg_location": FFMPEG_PATH,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
-            },
-            "extractor_args": {
-                "youtube": {"player_client": ["web", "android", "ios"]},
-            },
         }
-        if cookiefile:
-            ydl_opts["cookiefile"] = cookiefile
 
         if fmt == "mp3":
             ydl_opts["format"] = "bestaudio/best"
@@ -87,45 +56,15 @@ class handler(BaseHTTPRequestHandler):
                 "preferredquality": "320",
             }]
         else:
-            # Bazi videolarda mp4+m4a kombinasyonu yok; daha toleransli secici kullan.
-            ydl_opts["format"] = "bestvideo*+bestaudio/best"
+            ydl_opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
             ydl_opts["merge_output_format"] = "mp4"
 
         try:
-            info = None
-            format_fallbacks = []
-            if fmt == "mp4":
-                format_fallbacks = [
-                    "bestvideo*+bestaudio/best",
-                    "best[ext=mp4]/best",
-                    "best",
-                ]
-            else:
-                format_fallbacks = [
-                    "bestaudio/best",
-                    "best",
-                ]
-
-            last_err = None
-            for f in format_fallbacks:
-                try:
-                    attempt_opts = dict(ydl_opts)
-                    attempt_opts["format"] = f
-                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
-                        info = ydl.extract_info(url, download=True)
-                    if info:
-                        break
-                except yt_dlp.utils.DownloadError as e:
-                    last_err = e
-                    if "Requested format is not available" in str(e):
-                        continue
-                    raise
-
-            if not info:
-                if last_err:
-                    raise last_err
-                self._send_error(400, "Video bilgisi alınamadı")
-                return
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                if not info:
+                    self._send_error(400, "Video bilgisi alınamadı")
+                    return
 
             title = sanitize(info.get("title", "download"))
             ext = "mp3" if fmt == "mp3" else "mp4"
@@ -168,12 +107,6 @@ class handler(BaseHTTPRequestHandler):
             self._send_error(400, msg)
         except Exception as e:
             self._send_error(500, f"Sunucu hatası: {str(e)}")
-        finally:
-            if cookiefile and os.path.exists(cookiefile):
-                try:
-                    os.remove(cookiefile)
-                except Exception:
-                    pass
 
     def _send_error(self, code: int, msg: str):
         self.send_response(code)

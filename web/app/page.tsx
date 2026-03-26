@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
 
 type Format = "mp3" | "mp4";
@@ -20,19 +20,6 @@ type InfoResponse = {
   items: VideoItem[];
 };
 
-const HERO_IMAGES = [
-  "/hero/hero-1.jpg",
-  "/hero/hero-2.jpg",
-  "/hero/hero-3.jpg",
-  "/hero/hero-4.jpg",
-  "/hero/hero-5.jpg",
-  "/hero/hero-6.jpg",
-  "/hero/hero-7.jpg",
-  "/hero/hero-8.jpg",
-  "/hero/hero-9.jpg",
-  "/hero/hero-10.jpg",
-];
-
 
 
 export default function Home() {
@@ -42,7 +29,6 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [copiedError, setCopiedError] = useState(false);
 
   const [items, setItems] = useState<VideoItem[]>([]);
   const [infoType, setInfoType] = useState<InfoResponse["type"] | null>(null);
@@ -50,16 +36,7 @@ export default function Home() {
   const [infoLoading, setInfoLoading] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const [heroImage, setHeroImage] = useState(HERO_IMAGES[0]);
-  const apiBase = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
-  const apiEndpoint = (path: string) =>
-    apiBase ? `${apiBase}/${path}` : `/api/${path}`;
-
-  useEffect(() => {
-    // Random hero'yu client tarafinda sec (build-time sabitlenmeyi onler)
-    const picked = HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)];
-    setHeroImage(`${picked}?v=${Date.now()}`);
-  }, []);
+  const heroImage = useMemo(() => `/api/hero?r=${Math.floor(Math.random() * 1e9)}`, []);
 
   useEffect(() => {
     if (!helpOpen) return;
@@ -95,9 +72,7 @@ export default function Home() {
     setStatus("idle");
 
     try {
-      const res = await fetch(
-        `${apiEndpoint("info")}?url=${encodeURIComponent(trimmed)}`
-      );
+      const res = await fetch(`/api/info?url=${encodeURIComponent(trimmed)}`);
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(errText || `Hata: ${res.status}`);
@@ -133,7 +108,7 @@ export default function Home() {
     setMessage(customName ? `İndiriliyor: ${customName}` : "İndiriliyor...");
 
     const res = await fetch(
-      `${apiEndpoint("download")}?url=${encodeURIComponent(trimmed)}&format=${format}`,
+      `/api/download?url=${encodeURIComponent(trimmed)}&format=${format}`,
       { method: "GET" }
     );
 
@@ -176,7 +151,7 @@ export default function Home() {
     setMessage("Parçalar indirilip ZIP hazırlanıyor...");
 
     try {
-      const res = await fetch(apiEndpoint("download-batch"), {
+      const res = await fetch("/api/download-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,17 +186,6 @@ export default function Home() {
     }
   };
 
-  const handleCopyError = async () => {
-    if (!error) return;
-    try {
-      await navigator.clipboard.writeText(error);
-      setCopiedError(true);
-      window.setTimeout(() => setCopiedError(false), 1400);
-    } catch {
-      setCopiedError(false);
-    }
-  };
-
   return (
     <main className={styles.main}>
       <div className={styles.card}>
@@ -240,7 +204,6 @@ export default function Home() {
             Yardım
           </button>
         </div>
-
         <label className={styles.label}>YouTube Linki</label>
         <input
           type="url"
@@ -306,17 +269,7 @@ export default function Home() {
         )}
 
         {status === "error" && error && (
-          <div className={styles.errorRow}>
-            <p className={styles.error}>Hata: {error}</p>
-            <button
-              type="button"
-              className={styles.errorCopyButton}
-              onClick={handleCopyError}
-              title="Hata metnini kopyala"
-            >
-              {copiedError ? "Kopyalandi" : "Kopyala"}
-            </button>
-          </div>
+          <p className={styles.error}>Hata: {error}</p>
         )}
 
         {items.length > 0 && (
@@ -416,12 +369,12 @@ export default function Home() {
             />
           </div>
           <a
-            className={styles.footerCredit}
             href="https://github.com/b100guc"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
+            className={styles.footerCredit}
           >
-            Designed by b100guc
+            designed by 100GUC
           </a>
         </footer>
       </div>
