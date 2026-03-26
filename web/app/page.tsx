@@ -20,6 +20,19 @@ type InfoResponse = {
   items: VideoItem[];
 };
 
+const HERO_IMAGES = [
+  "/hero/hero-1.jpg",
+  "/hero/hero-2.jpg",
+  "/hero/hero-3.jpg",
+  "/hero/hero-4.jpg",
+  "/hero/hero-5.jpg",
+  "/hero/hero-6.jpg",
+  "/hero/hero-7.jpg",
+  "/hero/hero-8.jpg",
+  "/hero/hero-9.jpg",
+  "/hero/hero-10.jpg",
+];
+
 
 
 export default function Home() {
@@ -36,7 +49,10 @@ export default function Home() {
   const [infoLoading, setInfoLoading] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const heroImage = useMemo(() => `/api/hero?r=${Math.floor(Math.random() * 1e9)}`, []);
+  const heroImage = useMemo(
+    () => HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)],
+    []
+  );
 
   useEffect(() => {
     if (!helpOpen) return;
