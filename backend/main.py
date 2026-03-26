@@ -32,20 +32,61 @@ def sanitize(name: str) -> str:
 def load_cookiefile_from_env() -> str | None:
     cookies_b64 = os.getenv("YTDLP_COOKIES_B64", "").strip()
     cookies_txt = os.getenv("YTDLP_COOKIES_TXT", "").strip()
-    if not cookies_b64 and not cookies_txt:
+    split_txt_keys = [
+        "YTDLP_COOKIES_YOUTUBE_TXT",
+        "YTDLP_COOKIES_GOOGLE_TXT",
+        "YTDLP_COOKIES_ACCOUNTS_TXT",
+    ]
+    split_b64_keys = [
+        "YTDLP_COOKIES_YOUTUBE_B64",
+        "YTDLP_COOKIES_GOOGLE_B64",
+        "YTDLP_COOKIES_ACCOUNTS_B64",
+    ]
+
+    parts: list[str] = []
+
+    if cookies_b64:
+        try:
+            parts.append(base64.b64decode(cookies_b64).decode("utf-8", errors="ignore"))
+        except Exception:
+            pass
+    if cookies_txt:
+        parts.append(cookies_txt)
+
+    for key in split_b64_keys:
+        val = os.getenv(key, "").strip()
+        if not val:
+            continue
+        try:
+            parts.append(base64.b64decode(val).decode("utf-8", errors="ignore"))
+        except Exception:
+            continue
+
+    for key in split_txt_keys:
+        val = os.getenv(key, "").strip()
+        if val:
+            parts.append(val)
+
+    if not parts:
         return None
 
-    raw = b""
-    try:
-        if cookies_b64:
-            raw = base64.b64decode(cookies_b64)
-        else:
-            raw = cookies_txt.encode("utf-8")
-    except Exception:
+    merged_lines: list[str] = ["# Netscape HTTP Cookie File"]
+    seen_lines: set[str] = set()
+    for text in parts:
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line in seen_lines:
+                continue
+            seen_lines.add(line)
+            merged_lines.append(line)
+
+    if len(merged_lines) == 1:
         return None
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    tmp.write(raw)
+    tmp.write(("\n".join(merged_lines) + "\n").encode("utf-8"))
     tmp.flush()
     tmp.close()
     return tmp.name
