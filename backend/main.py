@@ -152,12 +152,13 @@ def download_with_fallback(url: str, fmt: str, outtmpl: str, opts: dict):
     attempt_opts["outtmpl"] = outtmpl
 
     if fmt == "mp3":
-        fallbacks = ["bestaudio/best", "bestaudio", "best"]
+        fallbacks = ["best", "bestaudio/best", "bestaudio"]
         attempt_opts["postprocessors"] = [
             {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "320"}
         ]
     else:
         fallbacks = [
+            "bestvideo+bestaudio/best",
             "bv*+ba/b",
             "bestvideo*+bestaudio/best",
             "best[ext=mp4]/best",
@@ -204,15 +205,23 @@ def download(url: str = Query(...), format: Literal["mp3", "mp4"] = "mp3"):
     cookiefile = opts.get("cookiefile")
 
     try:
-        info = download_with_fallback(url, format, out_tmpl, opts)
+        requested_format = format
+        info = download_with_fallback(url, requested_format, out_tmpl, opts)
+        ext = "mp3" if requested_format == "mp3" else "mp4"
+    except yt_dlp.utils.DownloadError as e:
+        # MP4 bazen YouTube tarafinda format kisiti nedeniyle patlayabiliyor.
+        # Bu durumda otomatik MP3'e dusurup indirilebilir deneyim sagla.
+        if requested_format == "mp4" and "Requested format is not available" in str(e):
+            info = download_with_fallback(url, "mp3", out_tmpl, opts)
+            ext = "mp3"
+        else:
+            raise HTTPException(400, str(e))
+    try:
         title = sanitize((info or {}).get("title") or "download")
-        ext = "mp3" if format == "mp3" else "mp4"
         files = list(Path(tmp_dir).glob(f"*.{ext}")) or list(Path(tmp_dir).glob("*.*"))
         if not files:
             raise HTTPException(500, "Dosya bulunamadı")
         return FileResponse(files[0], filename=f"{title}.{ext}", media_type="application/octet-stream")
-    except yt_dlp.utils.DownloadError as e:
-        raise HTTPException(400, str(e))
     finally:
         for f in Path(tmp_dir).glob("*"):
             try:
@@ -264,10 +273,21 @@ def download_batch(req: BatchDownloadRequest):
                 tmp_dir = tempfile.mkdtemp()
                 out_tmpl = os.path.join(tmp_dir, "%(title)s.%(ext)s")
                 try:
-                    download_with_fallback(url, fmt, out_tmpl, opts)
-                    files = list(Path(tmp_dir).glob(f"*.{ext}")) or list(Path(tmp_dir).glob("*.*"))
+                    file_ext = ext
+                    try:
+                        download_with_fallback(url, fmt, out_tmpl, opts)
+                    except yt_dlp.utils.DownloadError as e:
+                        if fmt == "mp4" and "Requested format is not available" in str(e):
+                            download_with_fallback(url, "mp3", out_tmpl, opts)
+                            file_ext = "mp3"
+                        else:
+                            raise
+                    files = list(Path(tmp_dir).glob(f"*.{file_ext}")) or list(Path(tmp_dir).glob("*.*"))
                     if files:
-                        zf.write(files[0], arcname=unique_filename(item.title))
+                        arc = unique_filename(item.title)
+                        if file_ext != ext:
+                            arc = arc.rsplit(".", 1)[0] + ".mp3"
+                        zf.write(files[0], arcname=arc)
                 finally:
                     for f in Path(tmp_dir).glob("*"):
                         try:
