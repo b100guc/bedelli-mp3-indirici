@@ -72,23 +72,11 @@ http://localhost:3000
 ```
 web/
 ├── app/              # Next.js arayüzü (page.tsx, globals.css, ...)
-├── api/              # Vercel Python serverless fonksiyonları
-│   ├── download.py   # Tek parça indirme
-│   ├── download-batch.py  # Toplu ZIP indirme
-│   ├── info.py       # Video/playlist bilgi alma
-│   └── hero.py       # Rastgele askeri görsel proxy
 ├── scripts/
-│   └── dev-api.py    # Yerel geliştirme API sunucusu (FastAPI)
+│   └── dev-api.py    # API sunucusu (FastAPI)
 ├── requirements.txt  # Python bağımlılıkları
 └── package.json      # Node.js bağımlılıkları
 ```
-
-## Vercel Deploy
-
-1. GitHub'a pushlayın.
-2. [vercel.com](https://vercel.com) → New Project → Repo seçin.
-3. **Root Directory:** `web`
-4. Deploy.
 
 ## Lisans
 
