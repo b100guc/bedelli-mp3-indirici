@@ -20,7 +20,7 @@ type InfoResponse = {
   items: VideoItem[];
 };
 
-
+const DEFAULT_API = "http://localhost:3002";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -36,7 +36,53 @@ export default function Home() {
   const [infoLoading, setInfoLoading] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const heroImage = useMemo(() => `/api/hero?r=${Math.floor(Math.random() * 1e9)}`, []);
+  const [apiBase, setApiBase] = useState(DEFAULT_API);
+  const [apiInput, setApiInput] = useState(DEFAULT_API);
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [showApiSettings, setShowApiSettings] = useState(false);
+  const [heroError, setHeroError] = useState(false);
+
+  const heroImage = useMemo(
+    () => `${apiBase}/hero?r=${Math.floor(Math.random() * 1e9)}`,
+    [apiBase]
+  );
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("bedelliApiBase");
+      if (saved) {
+        setApiBase(saved);
+        setApiInput(saved);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(`${apiBase}/health`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (!cancelled) setConnected(res.ok);
+      } catch {
+        if (!cancelled) setConnected(false);
+      }
+    };
+    check();
+    const id = setInterval(check, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [apiBase]);
+
+  useEffect(() => {
+    setHeroError(false);
+  }, [apiBase]);
 
   useEffect(() => {
     if (!helpOpen) return;
@@ -46,6 +92,17 @@ export default function Home() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [helpOpen]);
+
+  const saveApiUrl = () => {
+    const trimmed = apiInput.trim().replace(/\/+$/, "");
+    if (trimmed) {
+      setApiBase(trimmed);
+      try {
+        localStorage.setItem("bedelliApiBase", trimmed);
+      } catch {}
+    }
+    setShowApiSettings(false);
+  };
 
   const validateUrl = () => {
     const trimmed = url.trim();
@@ -72,7 +129,9 @@ export default function Home() {
     setStatus("idle");
 
     try {
-      const res = await fetch(`/api/info?url=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(
+        `${apiBase}/info?url=${encodeURIComponent(trimmed)}`
+      );
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(errText || `Hata: ${res.status}`);
@@ -108,7 +167,7 @@ export default function Home() {
     setMessage(customName ? `İndiriliyor: ${customName}` : "İndiriliyor...");
 
     const res = await fetch(
-      `/api/download?url=${encodeURIComponent(trimmed)}&format=${format}`,
+      `${apiBase}/download?url=${encodeURIComponent(trimmed)}&format=${format}`,
       { method: "GET" }
     );
 
@@ -151,7 +210,7 @@ export default function Home() {
     setMessage("Parçalar indirilip ZIP hazırlanıyor...");
 
     try {
-      const res = await fetch("/api/download-batch", {
+      const res = await fetch(`${apiBase}/download-batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,12 +245,96 @@ export default function Home() {
     }
   };
 
+  const hostLabel = (() => {
+    try {
+      return new URL(apiBase).host;
+    } catch {
+      return apiBase;
+    }
+  })();
+
   return (
     <main className={styles.main}>
       <div className={styles.card}>
-        <div className={styles.hero}>
-          <img src={heroImage} alt="TSK fotoğraf galerisi" className={styles.heroImage} />
+        <div
+          className={styles.connectionBar}
+          data-connected={
+            connected === true
+              ? "true"
+              : connected === false
+              ? "false"
+              : "checking"
+          }
+        >
+          <div className={styles.connectionLeft}>
+            <span
+              className={styles.connectionDot}
+              data-connected={
+                connected === true
+                  ? "true"
+                  : connected === false
+                  ? "false"
+                  : "checking"
+              }
+            />
+            <span className={styles.connectionText}>
+              {connected === null
+                ? "Bağlantı kontrol ediliyor..."
+                : connected
+                ? `Bağlı — ${hostLabel}`
+                : "Bağlantı yok — Yerel sunucuyu başlatın"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles.connectionToggle}
+            onClick={() => setShowApiSettings(!showApiSettings)}
+            title="API ayarları"
+          >
+            ⚙
+          </button>
         </div>
+
+        {showApiSettings && (
+          <div className={styles.apiSettings}>
+            <label className={styles.apiSettingsLabel}>API Adresi:</label>
+            <div className={styles.apiSettingsRow}>
+              <input
+                type="text"
+                className={styles.apiSettingsInput}
+                value={apiInput}
+                onChange={(e) => setApiInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveApiUrl()}
+                placeholder="http://localhost:3002"
+              />
+              <button
+                type="button"
+                className={styles.apiSettingsBtn}
+                onClick={saveApiUrl}
+              >
+                Kaydet
+              </button>
+            </div>
+            {!connected && (
+              <p className={styles.apiSettingsHint}>
+                Sunucuyu başlatmak için:{" "}
+                <code>python -m uvicorn scripts.server:app --port 3002</code>
+              </p>
+            )}
+          </div>
+        )}
+
+        {!heroError && (
+          <div className={styles.hero}>
+            <img
+              src={heroImage}
+              alt="TSK fotoğraf galerisi"
+              className={styles.heroImage}
+              onError={() => setHeroError(true)}
+            />
+          </div>
+        )}
+
         <div className={styles.headerRow}>
           <h1 className={styles.title}>Bedelli MP3 İndirici</h1>
           <button
@@ -204,6 +347,7 @@ export default function Home() {
             Yardım
           </button>
         </div>
+
         <label className={styles.label}>YouTube Linki</label>
         <input
           type="url"
@@ -211,7 +355,9 @@ export default function Home() {
           placeholder="https://www.youtube.com/watch?v=... veya oynatma listesi"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          disabled={status === "loading" || status === "downloading"}
+          disabled={
+            !connected || status === "loading" || status === "downloading"
+          }
         />
 
         <label className={styles.label}>Format</label>
@@ -223,7 +369,9 @@ export default function Home() {
               value="mp3"
               checked={format === "mp3"}
               onChange={() => setFormat("mp3")}
-              disabled={status === "loading" || status === "downloading"}
+              disabled={
+                !connected || status === "loading" || status === "downloading"
+              }
             />
             <span>MP3 (Ses) – 320kbps</span>
           </label>
@@ -234,7 +382,9 @@ export default function Home() {
               value="mp4"
               checked={format === "mp4"}
               onChange={() => setFormat("mp4")}
-              disabled={status === "loading" || status === "downloading"}
+              disabled={
+                !connected || status === "loading" || status === "downloading"
+              }
             />
             <span>MP4 (Video)</span>
           </label>
@@ -245,7 +395,7 @@ export default function Home() {
             type="button"
             className={styles.buttonSecondary}
             onClick={handleFetchInfo}
-            disabled={infoLoading || status === "downloading"}
+            disabled={!connected || infoLoading || status === "downloading"}
           >
             {infoLoading ? "Liste alınıyor…" : "Bul"}
           </button>
@@ -253,7 +403,7 @@ export default function Home() {
             type="button"
             className={styles.button}
             onClick={handleDownloadClick}
-            disabled={status === "downloading" || !items.length}
+            disabled={!connected || status === "downloading" || !items.length}
           >
             {status === "downloading" ? "İndiriliyor…" : "Seçilenleri indir"}
           </button>
@@ -262,7 +412,10 @@ export default function Home() {
         {(status === "downloading" || status === "success") && (
           <div className={styles.progressWrap}>
             <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+              <div
+                className={styles.progressFill}
+                style={{ width: `${progress}%` }}
+              />
             </div>
             <p className={styles.status}>{message}</p>
           </div>
@@ -311,7 +464,9 @@ export default function Home() {
                         if (e.target.checked) {
                           setSelectedIds((prev) => [...prev, item.id]);
                         } else {
-                          setSelectedIds((prev) => prev.filter((id) => id !== item.id));
+                          setSelectedIds((prev) =>
+                            prev.filter((id) => id !== item.id)
+                          );
                         }
                       }}
                     />
@@ -334,7 +489,9 @@ export default function Home() {
                         setProgress(0);
                         setMessage("");
                         setError(
-                          e instanceof Error ? e.message : "İndirme başarısız."
+                          e instanceof Error
+                            ? e.message
+                            : "İndirme başarısız."
                         );
                       }
                     }}
@@ -395,7 +552,9 @@ export default function Home() {
             <div className={styles.helpTop}>
               <div>
                 <div className={styles.helpTitle}>Kullanım Rehberi</div>
-                <div className={styles.helpSubtitle}>3 adımda hızlı indirme</div>
+                <div className={styles.helpSubtitle}>
+                  Yerel sunucu ile hızlı indirme
+                </div>
               </div>
               <button
                 type="button"
@@ -410,6 +569,18 @@ export default function Home() {
             <div className={styles.helpBody}>
               <ol className={styles.helpList}>
                 <li>
+                  <b>Sunucuyu başlat</b>
+                  <div className={styles.helpText}>
+                    Bilgisayarınızda Python API sunucusunu çalıştırın:
+                    <br />
+                    <code className={styles.helpCode}>
+                      python -m uvicorn scripts.server:app --port 3002
+                    </code>
+                    <br />
+                    Üstteki bağlantı çubuğu yeşile dönecektir.
+                  </div>
+                </li>
+                <li>
                   <b>Linki yapıştır</b>
                   <div className={styles.helpText}>
                     Video veya oynatma listesi linkini üstteki alana gir.
@@ -418,7 +589,8 @@ export default function Home() {
                 <li>
                   <b>Bul</b>
                   <div className={styles.helpText}>
-                    Sistem tek parça mı playlist mi anlar ve aşağıda listeyi çıkarır.
+                    Sistem tek parça mı playlist mi anlar ve aşağıda listeyi
+                    çıkarır.
                   </div>
                 </li>
                 <li>
@@ -434,8 +606,9 @@ export default function Home() {
                 <div className={styles.helpTipTitle}>İpuçları</div>
                 <ul className={styles.helpTips}>
                   <li>Formatı (MP3/MP4) indirmeden önce seç.</li>
-                  <li>Playlist’te checkbox ile seçim yapabilirsin.</li>
-                  <li>Paneli kapatmak için ESC’ye basabilirsin.</li>
+                  <li>Playlist'te checkbox ile seçim yapabilirsin.</li>
+                  <li>⚙ simgesi ile API adresini değiştirebilirsin.</li>
+                  <li>Paneli kapatmak için ESC'ye basabilirsin.</li>
                 </ul>
               </div>
             </div>

@@ -1,14 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      { source: "/api/download", destination: "http://localhost:3002/download" },
-      { source: "/api/download-batch", destination: "http://localhost:3002/download-batch" },
-      { source: "/api/hero", destination: "http://localhost:3002/hero" },
-      { source: "/api/info", destination: "http://localhost:3002/info" },
-    ];
-  },
+  output: "export",
 };
 
 module.exports = nextConfig;

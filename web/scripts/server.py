@@ -1,7 +1,3 @@
-# Yerel geliştirme için indirme API sunucusu
-# Kullanım: python scripts/dev-api.py
-# http://localhost:3002/download?url=...&format=mp3
-
 import io
 import os
 import random
@@ -26,7 +22,12 @@ except Exception:
     FFMPEG_PATH = "ffmpeg"
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 HERO_IMAGES: list[str] = [
     f"https://www.kkk.tsk.tr/img/default/galeri/{i:03d}.jpg"
@@ -34,9 +35,13 @@ HERO_IMAGES: list[str] = [
 ]
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/hero")
-def hero(r: int = Query(0, description="Cache-bust")):
-    # Görseli backend üzerinden çekip tarayıcıya servis ediyoruz (hotlink/CORS sorunlarını aşmak için)
+def hero(r: int = Query(0)):
     img_url = random.choice(HERO_IMAGES)
     req = Request(
         img_url,
@@ -52,9 +57,7 @@ def hero(r: int = Query(0, description="Cache-bust")):
     return Response(
         content=data,
         media_type=content_type,
-        headers={
-            "Cache-Control": "no-store",
-        },
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -199,13 +202,12 @@ def download_batch(req: BatchDownloadRequest):
 
 
 @app.get("/info", response_model=InfoResponse)
-def info(url: str = Query(..., description="YouTube video veya oynatma listesi URL'si")):
+def info(url: str = Query(...)):
     if not url.strip():
         raise HTTPException(400, "URL gerekli")
     if "youtube.com" not in url and "youtu.be" not in url:
         raise HTTPException(400, "Geçerli YouTube linki girin")
 
-    # Sadece bilgi al, indirme yok (extract_flat yok = tam başlıklar)
     ydl_opts = {
         "quiet": True,
         "skip_download": True,
@@ -213,48 +215,29 @@ def info(url: str = Query(..., description="YouTube video veya oynatma listesi U
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            result = ydl.extract_info(url, download=False)
 
         items: List[VideoItem] = []
 
-        if info.get("_type") == "playlist" and "entries" in info:
-            entries = info.get("entries") or []
+        if result.get("_type") == "playlist" and "entries" in result:
+            entries = result.get("entries") or []
             for idx, entry in enumerate(entries, start=1):
                 if not entry:
                     continue
                 vid_id = entry.get("id") or entry.get("url") or ""
                 title = entry.get("title") or entry.get("fulltitle") or f"Parça {idx}"
-                # Tam video linkini oluştur
                 video_url = entry.get("webpage_url") or f"https://www.youtube.com/watch?v={vid_id}"
-                items.append(
-                    VideoItem(
-                        id=vid_id,
-                        title=title,
-                        url=video_url,
-                        index=idx,
-                    )
-                )
+                items.append(VideoItem(id=vid_id, title=title, url=video_url, index=idx))
 
-            playlist_title = info.get("title") or "Oynatma Listesi"
-            return InfoResponse(
-                type="playlist",
-                title=playlist_title,
-                item_count=len(items),
-                items=items,
-            )
+            playlist_title = result.get("title") or "Oynatma Listesi"
+            return InfoResponse(type="playlist", title=playlist_title, item_count=len(items), items=items)
 
-        # Tek video
-        vid_id = info.get("id") or ""
-        title = info.get("fulltitle") or info.get("title") or "Video"
-        video_url = info.get("webpage_url") or url
+        vid_id = result.get("id") or ""
+        title = result.get("fulltitle") or result.get("title") or "Video"
+        video_url = result.get("webpage_url") or url
         items.append(VideoItem(id=vid_id, title=title, url=video_url, index=1))
 
-        return InfoResponse(
-            type="single",
-            title=title,
-            item_count=1,
-            items=items,
-        )
+        return InfoResponse(type="single", title=title, item_count=1, items=items)
 
     except yt_dlp.utils.DownloadError as e:
         msg = str(e)

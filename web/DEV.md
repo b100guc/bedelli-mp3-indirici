@@ -6,12 +6,13 @@
 ```bash
 cd web
 pip install -r requirements.txt
-python -m uvicorn scripts.dev-api:app --reload --port 3002
+python -m uvicorn scripts.server:app --reload --port 3002
 ```
 
 **Terminal 2 – Next.js:**
 ```bash
 cd web
+npm install
 npm run dev
 ```
 
