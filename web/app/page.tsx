@@ -40,11 +40,11 @@ export default function Home() {
   const [apiInput, setApiInput] = useState(DEFAULT_API);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [showApiSettings, setShowApiSettings] = useState(false);
-  const [heroError, setHeroError] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const heroImage = useMemo(
-    () => `${apiBase}/hero?r=${Math.floor(Math.random() * 1e9)}`,
-    [apiBase]
+    () => `/hero/hero-${Math.floor(Math.random() * 10) + 1}.jpg`,
+    []
   );
 
   useEffect(() => {
@@ -78,10 +78,6 @@ export default function Home() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [apiBase]);
-
-  useEffect(() => {
-    setHeroError(false);
   }, [apiBase]);
 
   useEffect(() => {
@@ -315,25 +311,40 @@ export default function Home() {
                 Kaydet
               </button>
             </div>
-            {!connected && (
-              <p className={styles.apiSettingsHint}>
-                Sunucuyu başlatmak için:{" "}
-                <code>python -m uvicorn scripts.server:app --port 3002</code>
-              </p>
-            )}
           </div>
         )}
 
-        {!heroError && (
-          <div className={styles.hero}>
-            <img
-              src={heroImage}
-              alt="TSK fotoğraf galerisi"
-              className={styles.heroImage}
-              onError={() => setHeroError(true)}
-            />
+        {connected === false && (
+          <div className={styles.cmdBox}>
+            <div className={styles.cmdHeader}>
+              <span className={styles.cmdLabel}>Sunucuyu başlatmak için terminale yapıştır:</span>
+              <button
+                type="button"
+                className={styles.cmdCopy}
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    "python -m uvicorn scripts.server:app --port 3002"
+                  );
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                {copied ? "Kopyalandı!" : "Kopyala"}
+              </button>
+            </div>
+            <pre className={styles.cmdPre}>
+              <code>python -m uvicorn scripts.server:app --port 3002</code>
+            </pre>
           </div>
         )}
+
+        <div className={styles.hero}>
+          <img
+            src={heroImage}
+            alt="TSK fotoğraf galerisi"
+            className={styles.heroImage}
+          />
+        </div>
 
         <div className={styles.headerRow}>
           <h1 className={styles.title}>Bedelli MP3 İndirici</h1>
@@ -572,11 +583,9 @@ export default function Home() {
                   <b>Sunucuyu başlat</b>
                   <div className={styles.helpText}>
                     Bilgisayarınızda Python API sunucusunu çalıştırın:
-                    <br />
-                    <code className={styles.helpCode}>
-                      python -m uvicorn scripts.server:app --port 3002
-                    </code>
-                    <br />
+                    <pre className={styles.helpPre}>
+                      <code>python -m uvicorn scripts.server:app --port 3002</code>
+                    </pre>
                     Üstteki bağlantı çubuğu yeşile dönecektir.
                   </div>
                 </li>

@@ -210,6 +210,61 @@
   font-size: 0.72rem;
 }
 
+.cmdBox {
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(249, 115, 115, 0.25);
+  border-radius: var(--radius-sm);
+  background: rgba(249, 115, 115, 0.04);
+  overflow: hidden;
+}
+
+.cmdHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.7rem;
+  gap: 0.5rem;
+}
+
+.cmdLabel {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.cmdCopy {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cmdCopy:hover {
+  background: rgba(59, 122, 60, 0.15);
+  border-color: var(--accent);
+}
+
+.cmdPre {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  overflow-x: auto;
+}
+
+.cmdPre code {
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+  font-size: 0.82rem;
+  color: var(--success);
+  white-space: nowrap;
+  user-select: all;
+}
+
 .hero {
   width: 100%;
   margin: 0 auto 1.25rem auto;
@@ -608,12 +663,19 @@
   gap: 0.35rem;
 }
 
-.helpCode {
-  display: inline-block;
-  margin-top: 0.3rem;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 0.25rem 0.5rem;
-  border-radius: 5px;
+.helpPre {
+  margin: 0.4rem 0 0.35rem 0;
+  padding: 0.5rem 0.6rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.helpPre code {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
   font-size: 0.78rem;
-  word-break: break-all;
+  color: var(--success);
+  user-select: all;
+  white-space: nowrap;
 }
