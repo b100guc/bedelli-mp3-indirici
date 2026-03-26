@@ -49,8 +49,6 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(parsed.query)
         url = (params.get("url") or [""])[0].strip()
         fmt = (params.get("format") or ["mp3"])[0].lower()
-        # Geçici olarak MP4 kapalı: her isteği MP3'e zorla.
-        fmt = "mp3"
 
         if not url:
             self._send_error(400, "URL gerekli")

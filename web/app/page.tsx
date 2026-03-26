@@ -37,7 +37,7 @@ const HERO_IMAGES = [
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const format: Format = "mp3";
+  const [format, setFormat] = useState<Format>("mp3");
   const [status, setStatus] = useState<Status>("idle");
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
@@ -50,6 +50,9 @@ export default function Home() {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [heroImage, setHeroImage] = useState(HERO_IMAGES[0]);
+  const apiBase = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
+  const apiEndpoint = (path: string) =>
+    apiBase ? `${apiBase}/${path}` : `/api/${path}`;
 
   useEffect(() => {
     // Random hero'yu client tarafinda sec (build-time sabitlenmeyi onler)
@@ -91,7 +94,9 @@ export default function Home() {
     setStatus("idle");
 
     try {
-      const res = await fetch(`/api/info?url=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(
+        `${apiEndpoint("info")}?url=${encodeURIComponent(trimmed)}`
+      );
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(errText || `Hata: ${res.status}`);
@@ -127,7 +132,7 @@ export default function Home() {
     setMessage(customName ? `İndiriliyor: ${customName}` : "İndiriliyor...");
 
     const res = await fetch(
-      `/api/download?url=${encodeURIComponent(trimmed)}&format=${format}`,
+      `${apiEndpoint("download")}?url=${encodeURIComponent(trimmed)}&format=${format}`,
       { method: "GET" }
     );
 
@@ -170,7 +175,7 @@ export default function Home() {
     setMessage("Parçalar indirilip ZIP hazırlanıyor...");
 
     try {
-      const res = await fetch("/api/download-batch", {
+      const res = await fetch(apiEndpoint("download-batch"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -235,7 +240,30 @@ export default function Home() {
         />
 
         <label className={styles.label}>Format</label>
-        <div className={styles.formatInfo}>Sabit: MP3 (320kbps)</div>
+        <div className={styles.radioGroup}>
+          <label className={styles.radio}>
+            <input
+              type="radio"
+              name="format"
+              value="mp3"
+              checked={format === "mp3"}
+              onChange={() => setFormat("mp3")}
+              disabled={status === "loading" || status === "downloading"}
+            />
+            <span>MP3 (Ses) – 320kbps</span>
+          </label>
+          <label className={styles.radio}>
+            <input
+              type="radio"
+              name="format"
+              value="mp4"
+              checked={format === "mp4"}
+              onChange={() => setFormat("mp4")}
+              disabled={status === "loading" || status === "downloading"}
+            />
+            <span>MP4 (Video)</span>
+          </label>
+        </div>
 
         <div className={styles.buttonRow}>
           <button

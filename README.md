@@ -14,35 +14,29 @@ Askeri temalı arayüzle YouTube linklerini analiz eden, parçaları listeleyen 
 ## Teknolojiler
 
 - Frontend: Next.js (App Router)
-- API: Python Serverless (`web/api/*.py`) + `yt-dlp`
-- Dönüştürme: `ffmpeg` (`imageio-ffmpeg` ile)
+- Backend: FastAPI + `yt-dlp` (Railway)
+- Donusturme: ffmpeg
 
 ## Proje Yapısı
 
 ```text
-web/
-  app/                 # Arayüz
-  api/                 # Vercel Python serverless endpoint'leri
-    download.py
-    download-batch.py
-    info.py
-    hero.py
-  scripts/dev-api.py   # Yerel geliştirme API sunucusu
+web/                   # Next.js frontend (Vercel)
+backend/               # FastAPI backend (Railway)
 ```
 
 ## Yerelde Çalıştırma
 
-Yerel geliştirmede 2 servis çalışır:
+Yerelde 2 servis:
 
-1) Python API (`http://127.0.0.1:3002`)
-2) Next.js UI (`http://localhost:3000`)
+1) Backend (`http://127.0.0.1:8000`)
+2) UI (`http://localhost:3000`)
 
-### 1) API
+### 1) Backend
 
 ```bash
-cd web
+cd backend
 pip install -r requirements.txt
-python -m uvicorn scripts.dev-api:app --reload --port 3002
+uvicorn main:app --reload --port 8000
 ```
 
 ### 2) UI
@@ -50,6 +44,7 @@ python -m uvicorn scripts.dev-api:app --reload --port 3002
 ```bash
 cd web
 npm install
+set NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
 npm run dev
 ```
 
@@ -61,20 +56,19 @@ npm run dev
    - Satırdaki `İndir` => tek dosya
    - `Seçilenleri indir` => `parcalar.zip`
 
-## Vercel Deploy
+## Deploy (Vercel + Railway)
 
-1. Projeyi GitHub'a pushla.
-2. Vercel'de yeni proje oluştur.
-3. **Root Directory** olarak `web` seç.
-4. Deploy et.
-
-Not: Uygulama Vercel'de `web/api` altındaki Python endpoint'leriyle çalışır.
+1. Railway'de backend deploy et (`backend` root).
+2. Domain al (`https://....up.railway.app`).
+3. Vercel'de frontend deploy et (`web` root).
+4. Vercel env:
+   - `NEXT_PUBLIC_API_BASE=https://....up.railway.app`
 
 ## YouTube "not a bot" (cookies) ayarı
 
-YouTube bazı IP'lerde doğrulama isteyebilir. Bunu azaltmak için Vercel'de aşağıdaki env'lerden birini ekleyebilirsin:
+YouTube bazı IP'lerde doğrulama isteyebilir. Bunu azaltmak için Railway backend env'e aşağıdaki değişkenlerden birini ekleyebilirsin:
 
 - `YTDLP_COOKIES_B64` (önerilen): `cookies.txt` dosyasının Base64 hali
 - `YTDLP_COOKIES_TXT`: `cookies.txt` içeriğinin düz metni
 
-API endpoint'leri (`/api/info`, `/api/download`, `/api/download-batch`) bu env'leri otomatik kullanır.
+Backend endpoint'leri (`/info`, `/download`, `/download-batch`) bu env'leri otomatik kullanır.
