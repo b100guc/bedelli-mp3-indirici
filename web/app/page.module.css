@@ -139,6 +139,17 @@
   cursor: not-allowed;
 }
 
+.formatInfo {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  color: var(--accent-hover);
+  background: rgba(79, 154, 82, 0.1);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .button {
   width: 100%;
   padding: 0.9rem 1.5rem;

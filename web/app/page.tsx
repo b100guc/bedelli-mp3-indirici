@@ -37,7 +37,7 @@ const HERO_IMAGES = [
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [format, setFormat] = useState<Format>("mp3");
+  const format: Format = "mp3";
   const [status, setStatus] = useState<Status>("idle");
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
@@ -235,30 +235,7 @@ export default function Home() {
         />
 
         <label className={styles.label}>Format</label>
-        <div className={styles.radioGroup}>
-          <label className={styles.radio}>
-            <input
-              type="radio"
-              name="format"
-              value="mp3"
-              checked={format === "mp3"}
-              onChange={() => setFormat("mp3")}
-              disabled={status === "loading" || status === "downloading"}
-            />
-            <span>MP3 (Ses) – 320kbps</span>
-          </label>
-          <label className={styles.radio}>
-            <input
-              type="radio"
-              name="format"
-              value="mp4"
-              checked={format === "mp4"}
-              onChange={() => setFormat("mp4")}
-              disabled={status === "loading" || status === "downloading"}
-            />
-            <span>MP4 (Video)</span>
-          </label>
-        </div>
+        <div className={styles.formatInfo}>Sabit: MP3 (320kbps)</div>
 
         <div className={styles.buttonRow}>
           <button

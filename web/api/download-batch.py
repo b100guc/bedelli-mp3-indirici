@@ -53,6 +53,8 @@ class handler(BaseHTTPRequestHandler):
 
         items = payload.get("items") or []
         fmt = (payload.get("format") or "mp3").lower()
+        # Geçici olarak MP4 kapalı: toplu indirmeyi MP3'e zorla.
+        fmt = "mp3"
         if not items:
             self._send_text(400, "En az bir parça seçin")
             return
