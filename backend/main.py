@@ -154,40 +154,97 @@ def debug(url: str = Query("https://www.youtube.com/watch?v=xnP7qKxwzjg")):
     opts = base_ydl_opts()
     cookiefile = opts.get("cookiefile")
     cookie_lines = 0
+    cookie_domains: list[str] = []
+    cookie_sample_lines: list[str] = []
     if cookiefile and os.path.exists(cookiefile):
         with open(cookiefile) as f:
-            cookie_lines = sum(1 for ln in f if ln.strip() and not ln.startswith("#"))
+            for ln in f:
+                stripped = ln.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                cookie_lines += 1
+                parts = stripped.split("\t")
+                if len(parts) >= 7:
+                    domain = parts[0]
+                    name = parts[5]
+                    if domain not in cookie_domains:
+                        cookie_domains.append(domain)
+                    if len(cookie_sample_lines) < 8:
+                        cookie_sample_lines.append(f"{domain}\t{name}\t(value hidden)")
+                else:
+                    if len(cookie_sample_lines) < 8:
+                        cookie_sample_lines.append(f"BAD FORMAT ({len(parts)} fields): {stripped[:80]}")
 
+    # Test 1: with cookies + extractor_args
     formats_info = []
-    error_msg = None
+    error_with_cookies = None
     try:
-        opts["skip_download"] = True
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        test_opts = dict(opts)
+        test_opts["skip_download"] = True
+        with yt_dlp.YoutubeDL(test_opts) as ydl:
             data = ydl.extract_info(url, download=False)
         for fmt in (data.get("formats") or []):
             formats_info.append({
                 "id": fmt.get("format_id"),
                 "ext": fmt.get("ext"),
-                "resolution": fmt.get("resolution") or fmt.get("format_note"),
+                "res": fmt.get("resolution") or fmt.get("format_note"),
                 "acodec": fmt.get("acodec"),
                 "vcodec": fmt.get("vcodec"),
             })
     except Exception as e:
-        error_msg = str(e)
-    finally:
-        if cookiefile and os.path.exists(cookiefile):
-            try:
-                os.remove(cookiefile)
-            except Exception:
-                pass
+        error_with_cookies = str(e)
+
+    # Test 2: with cookies but WITHOUT extractor_args
+    formats_no_extargs = 0
+    error_no_extargs = None
+    try:
+        test2 = dict(opts)
+        test2["skip_download"] = True
+        test2.pop("extractor_args", None)
+        with yt_dlp.YoutubeDL(test2) as ydl:
+            data2 = ydl.extract_info(url, download=False)
+        formats_no_extargs = len(data2.get("formats") or [])
+    except Exception as e:
+        error_no_extargs = str(e)
+
+    # Test 3: WITHOUT cookies (compare)
+    formats_no_cookies = 0
+    error_no_cookies = None
+    try:
+        test3 = dict(opts)
+        test3["skip_download"] = True
+        test3.pop("cookiefile", None)
+        with yt_dlp.YoutubeDL(test3) as ydl:
+            data3 = ydl.extract_info(url, download=False)
+        formats_no_cookies = len(data3.get("formats") or [])
+    except Exception as e:
+        error_no_cookies = str(e)
+
+    if cookiefile and os.path.exists(cookiefile):
+        try:
+            os.remove(cookiefile)
+        except Exception:
+            pass
 
     return {
         "env_status": env_status,
         "cookie_lines_merged": cookie_lines,
+        "cookie_domains": cookie_domains,
+        "cookie_sample": cookie_sample_lines,
         "cookiefile_loaded": cookiefile is not None,
-        "formats_count": len(formats_info),
-        "formats": formats_info[:20],
-        "error": error_msg,
+        "test1_with_cookies": {
+            "formats_count": len(formats_info),
+            "formats": formats_info[:15],
+            "error": error_with_cookies,
+        },
+        "test2_no_extractor_args": {
+            "formats_count": formats_no_extargs,
+            "error": error_no_extargs,
+        },
+        "test3_no_cookies": {
+            "formats_count": formats_no_cookies,
+            "error": error_no_cookies,
+        },
     }
 
 
