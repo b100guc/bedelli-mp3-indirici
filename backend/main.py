@@ -139,6 +139,58 @@ def health():
     return {"ok": True}
 
 
+@app.get("/debug")
+def debug(url: str = Query("https://www.youtube.com/watch?v=xnP7qKxwzjg")):
+    """Cookie ve format durumunu goster (hata ayiklama icin)."""
+    env_keys = [
+        "YTDLP_COOKIES_TXT", "YTDLP_COOKIES_B64",
+        "YTDLP_COOKIES_YOUTUBE_TXT", "YTDLP_COOKIES_GOOGLE_TXT",
+        "YTDLP_COOKIES_ACCOUNTS_TXT",
+        "YTDLP_COOKIES_YOUTUBE_B64", "YTDLP_COOKIES_GOOGLE_B64",
+        "YTDLP_COOKIES_ACCOUNTS_B64",
+    ]
+    env_status = {k: ("set" if os.getenv(k, "").strip() else "empty") for k in env_keys}
+
+    opts = base_ydl_opts()
+    cookiefile = opts.get("cookiefile")
+    cookie_lines = 0
+    if cookiefile and os.path.exists(cookiefile):
+        with open(cookiefile) as f:
+            cookie_lines = sum(1 for ln in f if ln.strip() and not ln.startswith("#"))
+
+    formats_info = []
+    error_msg = None
+    try:
+        opts["skip_download"] = True
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            data = ydl.extract_info(url, download=False)
+        for fmt in (data.get("formats") or []):
+            formats_info.append({
+                "id": fmt.get("format_id"),
+                "ext": fmt.get("ext"),
+                "resolution": fmt.get("resolution") or fmt.get("format_note"),
+                "acodec": fmt.get("acodec"),
+                "vcodec": fmt.get("vcodec"),
+            })
+    except Exception as e:
+        error_msg = str(e)
+    finally:
+        if cookiefile and os.path.exists(cookiefile):
+            try:
+                os.remove(cookiefile)
+            except Exception:
+                pass
+
+    return {
+        "env_status": env_status,
+        "cookie_lines_merged": cookie_lines,
+        "cookiefile_loaded": cookiefile is not None,
+        "formats_count": len(formats_info),
+        "formats": formats_info[:20],
+        "error": error_msg,
+    }
+
+
 @app.get("/info", response_model=InfoResponse)
 def info(url: str = Query(...)):
     if not url.strip():
