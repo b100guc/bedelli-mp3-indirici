@@ -87,7 +87,8 @@ class handler(BaseHTTPRequestHandler):
                 "preferredquality": "320",
             }]
         else:
-            ydl_opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+            # Bazi videolarda mp4+m4a kombinasyonu yok; daha toleransli secici kullan.
+            ydl_opts["format"] = "bestvideo*+bestaudio/best"
             ydl_opts["merge_output_format"] = "mp4"
 
         try:
