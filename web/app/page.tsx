@@ -42,6 +42,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [copiedError, setCopiedError] = useState(false);
 
   const [items, setItems] = useState<VideoItem[]>([]);
   const [infoType, setInfoType] = useState<InfoResponse["type"] | null>(null);
@@ -210,6 +211,17 @@ export default function Home() {
     }
   };
 
+  const handleCopyError = async () => {
+    if (!error) return;
+    try {
+      await navigator.clipboard.writeText(error);
+      setCopiedError(true);
+      window.setTimeout(() => setCopiedError(false), 1400);
+    } catch {
+      setCopiedError(false);
+    }
+  };
+
   return (
     <main className={styles.main}>
       <div className={styles.card}>
@@ -294,7 +306,17 @@ export default function Home() {
         )}
 
         {status === "error" && error && (
-          <p className={styles.error}>Hata: {error}</p>
+          <div className={styles.errorRow}>
+            <p className={styles.error}>Hata: {error}</p>
+            <button
+              type="button"
+              className={styles.errorCopyButton}
+              onClick={handleCopyError}
+              title="Hata metnini kopyala"
+            >
+              {copiedError ? "Kopyalandi" : "Kopyala"}
+            </button>
+          </div>
         )}
 
         {items.length > 0 && (

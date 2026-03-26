@@ -228,6 +228,32 @@
   margin-top: 1rem;
   font-size: 0.875rem;
   color: var(--error);
+  flex: 1;
+  word-break: break-word;
+}
+
+.errorRow {
+  margin-top: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.errorCopyButton {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.32rem 0.58rem;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.errorCopyButton:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .list {
