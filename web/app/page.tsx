@@ -323,7 +323,7 @@ export default function Home() {
                 className={styles.cmdCopy}
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    "python -m uvicorn scripts.server:app --port 3002"
+                    "cd web && python -m uvicorn scripts.server:app --port 3002"
                   );
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
@@ -333,7 +333,7 @@ export default function Home() {
               </button>
             </div>
             <pre className={styles.cmdPre}>
-              <code>python -m uvicorn scripts.server:app --port 3002</code>
+              <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
             </pre>
           </div>
         )}
@@ -584,7 +584,7 @@ export default function Home() {
                   <div className={styles.helpText}>
                     Bilgisayarınızda Python API sunucusunu çalıştırın:
                     <pre className={styles.helpPre}>
-                      <code>python -m uvicorn scripts.server:app --port 3002</code>
+                      <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
                     </pre>
                     Üstteki bağlantı çubuğu yeşile dönecektir.
                   </div>
