@@ -92,14 +92,6 @@ web/
 └── next.config.js      # Next.js yapılandırması (statik export)
 ```
 
-## Vercel Deploy (Sadece Frontend)
-
-1. Repoyu GitHub'a pushlayın.
-2. [vercel.com](https://vercel.com) → New Project → Repo seçin.
-3. **Root Directory:** `web`
-4. Deploy.
-
-Vercel sadece arayüzü sunar. İndirme işlemleri kullanıcının kendi bilgisayarındaki Python sunucusu üzerinden gerçekleşir.
 
 ## Lisans
 
