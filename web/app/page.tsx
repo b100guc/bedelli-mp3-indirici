@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 type Format = "mp3" | "mp4";
@@ -49,10 +49,13 @@ export default function Home() {
   const [infoLoading, setInfoLoading] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const heroImage = useMemo(
-    () => HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)],
-    []
-  );
+  const [heroImage, setHeroImage] = useState(HERO_IMAGES[0]);
+
+  useEffect(() => {
+    // Random hero'yu client tarafinda sec (build-time sabitlenmeyi onler)
+    const picked = HERO_IMAGES[Math.floor(Math.random() * HERO_IMAGES.length)];
+    setHeroImage(`${picked}?v=${Date.now()}`);
+  }, []);
 
   useEffect(() => {
     if (!helpOpen) return;
