@@ -94,6 +94,7 @@ def load_cookiefile_from_env() -> str | None:
 
 def base_ydl_opts() -> dict:
     cookiefile = load_cookiefile_from_env()
+    oauth_token = os.getenv("YTDLP_OAUTH_TOKEN", "").strip()
     opts = {
         "noplaylist": True,
         "quiet": True,
@@ -105,7 +106,10 @@ def base_ydl_opts() -> dict:
             "youtube": {"player_client": ["web", "android", "ios"]},
         },
     }
-    if cookiefile:
+    if oauth_token:
+        opts["username"] = "oauth"
+        opts["password"] = oauth_token
+    elif cookiefile:
         opts["cookiefile"] = cookiefile
     return opts
 
@@ -150,6 +154,8 @@ def debug(url: str = Query("https://www.youtube.com/watch?v=xnP7qKxwzjg")):
         "YTDLP_COOKIES_ACCOUNTS_B64",
     ]
     env_status = {k: ("set" if os.getenv(k, "").strip() else "empty") for k in env_keys}
+    oauth_token = os.getenv("YTDLP_OAUTH_TOKEN", "").strip()
+    oauth_status = "set" if oauth_token else "empty"
 
     opts = base_ydl_opts()
     cookiefile = opts.get("cookiefile")
@@ -229,6 +235,8 @@ def debug(url: str = Query("https://www.youtube.com/watch?v=xnP7qKxwzjg")):
     return {
         "env_status": env_status,
         "cookie_lines_merged": cookie_lines,
+        "oauth_token": oauth_status,
+        "auth_method": "oauth" if oauth_token else ("cookies" if cookiefile else "none"),
         "cookie_domains": cookie_domains,
         "cookie_sample": cookie_sample_lines,
         "cookiefile_loaded": cookiefile is not None,
