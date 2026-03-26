@@ -1,5 +1,7 @@
 # Bedelli MP3 İndirici
 
+> **[English version →](README_EN.md)**
+
 Askeri temalı YouTube video/playlist indirici. Arayüz web'de, indirme motoru kendi bilgisayarında çalışır.
 
 ## Nasıl Çalışır?
