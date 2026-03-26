@@ -567,12 +567,12 @@ export default function Home() {
             />
           </div>
           <a
-            href="https://github.com/b100guc"
+            href="https://github.com/b100guc/bedelli-mp3-indirici"
             target="_blank"
             rel="noopener noreferrer"
             className={styles.footerCredit}
           >
-            designed by 100GUC
+            GitHub — b100guc/bedelli-mp3-indirici
           </a>
         </footer>
       </div>
