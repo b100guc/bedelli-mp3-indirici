@@ -193,44 +193,28 @@ def download_with_fallback(url: str, fmt: str, outtmpl: str, opts: dict):
     attempt_opts["outtmpl"] = outtmpl
 
     if fmt == "mp3":
-        fallbacks = ["best", "bestaudio/best", "bestaudio"]
+        # yt-dlp format fallback zinciri:
+        # 1) bestaudio/best -> en iyi ses / en iyi birlesik
+        # 2) ba/b -> herhangi ses / herhangi akis
+        attempt_opts["format"] = "bestaudio/best/ba/b"
         attempt_opts["postprocessors"] = [
-            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "320"}
+            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}
         ]
     else:
-        fallbacks = [
-            "bestvideo+bestaudio/best",
-            "bv*+ba/b",
-            "bestvideo*+bestaudio/best",
-            "best[ext=mp4]/best",
-            "best",
-        ]
+        attempt_opts["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/bestvideo+bestaudio/best/bv+ba/b"
         attempt_opts["merge_output_format"] = "mp4"
 
-    last_err = None
-    for f in fallbacks:
-        try:
-            one = dict(attempt_opts)
-            one["format"] = f
-            with yt_dlp.YoutubeDL(one) as ydl:
-                info = ydl.extract_info(url, download=True)
-            return info
-        except yt_dlp.utils.DownloadError as e:
-            last_err = e
-            if "Requested format is not available" in str(e):
-                continue
-            raise
-    if last_err:
-        # Son deneme: format kisiti olmadan indir.
-        try:
-            one = dict(attempt_opts)
-            one.pop("format", None)
-            with yt_dlp.YoutubeDL(one) as ydl:
-                info = ydl.extract_info(url, download=True)
-            return info
-        except yt_dlp.utils.DownloadError:
-            raise last_err
-    raise HTTPException(400, "Video indirilemedi")
+    try:
+        with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+        return info
+    except yt_dlp.utils.DownloadError as e:
+        # Son care: format kisitini kaldirip yt-dlp varsayilanina birak.
+        if "Requested format is not available" in str(e):
+            attempt_opts.pop("format", None)
+            with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                return ydl.extract_info(url, download=True)
+        raise
 
 
 @app.get("/download")
