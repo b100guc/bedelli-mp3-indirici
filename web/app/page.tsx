@@ -505,7 +505,13 @@ export default function Home() {
                         }
                       }}
                     />
-                    <span>
+                    <img
+                      className={styles.listThumb}
+                      src={`https://img.youtube.com/vi/${item.id}/default.jpg`}
+                      alt=""
+                      loading="lazy"
+                    />
+                    <span className={styles.listName}>
                       {item.index ? `${item.index}. ` : ""}
                       {item.title}
                     </span>

@@ -491,8 +491,8 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  max-height: 260px;
+  gap: 0.35rem;
+  max-height: 340px;
   overflow-y: auto;
 }
 
@@ -500,8 +500,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.4rem 0.25rem;
+  gap: 0.6rem;
+  padding: 0.3rem 0.25rem;
   border-radius: 6px;
 }
 
@@ -516,12 +516,31 @@
   font-size: 0.85rem;
   color: var(--text);
   flex: 1;
+  min-width: 0;
+  cursor: pointer;
 }
 
 .listLabel input {
   width: 1rem;
   height: 1rem;
   accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.listThumb {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.listName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .listItemButton {
