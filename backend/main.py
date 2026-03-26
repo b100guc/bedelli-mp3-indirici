@@ -152,12 +152,17 @@ def download_with_fallback(url: str, fmt: str, outtmpl: str, opts: dict):
     attempt_opts["outtmpl"] = outtmpl
 
     if fmt == "mp3":
-        fallbacks = ["bestaudio/best", "best"]
+        fallbacks = ["bestaudio/best", "bestaudio", "best"]
         attempt_opts["postprocessors"] = [
             {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "320"}
         ]
     else:
-        fallbacks = ["bestvideo*+bestaudio/best", "best[ext=mp4]/best", "best"]
+        fallbacks = [
+            "bv*+ba/b",
+            "bestvideo*+bestaudio/best",
+            "best[ext=mp4]/best",
+            "best",
+        ]
         attempt_opts["merge_output_format"] = "mp4"
 
     last_err = None
@@ -174,7 +179,15 @@ def download_with_fallback(url: str, fmt: str, outtmpl: str, opts: dict):
                 continue
             raise
     if last_err:
-        raise last_err
+        # Son deneme: format kisiti olmadan indir.
+        try:
+            one = dict(attempt_opts)
+            one.pop("format", None)
+            with yt_dlp.YoutubeDL(one) as ydl:
+                info = ydl.extract_info(url, download=True)
+            return info
+        except yt_dlp.utils.DownloadError:
+            raise last_err
     raise HTTPException(400, "Video indirilemedi")
 
 
