@@ -118,8 +118,37 @@ class handler(BaseHTTPRequestHandler):
                     ydl_opts["outtmpl"] = out_tmpl
 
                     try:
-                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                            ydl.download([url])
+                        format_fallbacks = []
+                        if fmt == "mp4":
+                            format_fallbacks = [
+                                "bestvideo*+bestaudio/best",
+                                "best[ext=mp4]/best",
+                                "best",
+                            ]
+                        else:
+                            format_fallbacks = [
+                                "bestaudio/best",
+                                "best",
+                            ]
+
+                        success = False
+                        last_err = None
+                        for f in format_fallbacks:
+                            try:
+                                attempt_opts = dict(ydl_opts)
+                                attempt_opts["format"] = f
+                                with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                                    ydl.download([url])
+                                success = True
+                                break
+                            except yt_dlp.utils.DownloadError as e:
+                                last_err = e
+                                if "Requested format is not available" in str(e):
+                                    continue
+                                raise
+
+                        if not success and last_err:
+                            raise last_err
 
                         files = list(Path(tmp_dir).glob(f"*.{ext}")) or list(Path(tmp_dir).glob("*.*"))
                         if files:

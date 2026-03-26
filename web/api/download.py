@@ -92,11 +92,40 @@ class handler(BaseHTTPRequestHandler):
             ydl_opts["merge_output_format"] = "mp4"
 
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not info:
-                    self._send_error(400, "Video bilgisi alınamadı")
-                    return
+            info = None
+            format_fallbacks = []
+            if fmt == "mp4":
+                format_fallbacks = [
+                    "bestvideo*+bestaudio/best",
+                    "best[ext=mp4]/best",
+                    "best",
+                ]
+            else:
+                format_fallbacks = [
+                    "bestaudio/best",
+                    "best",
+                ]
+
+            last_err = None
+            for f in format_fallbacks:
+                try:
+                    attempt_opts = dict(ydl_opts)
+                    attempt_opts["format"] = f
+                    with yt_dlp.YoutubeDL(attempt_opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                    if info:
+                        break
+                except yt_dlp.utils.DownloadError as e:
+                    last_err = e
+                    if "Requested format is not available" in str(e):
+                        continue
+                    raise
+
+            if not info:
+                if last_err:
+                    raise last_err
+                self._send_error(400, "Video bilgisi alınamadı")
+                return
 
             title = sanitize(info.get("title", "download"))
             ext = "mp3" if fmt == "mp3" else "mp4"
