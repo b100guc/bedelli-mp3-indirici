@@ -69,3 +69,12 @@ npm run dev
 4. Deploy et.
 
 Not: Uygulama Vercel'de `web/api` altındaki Python endpoint'leriyle çalışır.
+
+## YouTube "not a bot" (cookies) ayarı
+
+YouTube bazı IP'lerde doğrulama isteyebilir. Bunu azaltmak için Vercel'de aşağıdaki env'lerden birini ekleyebilirsin:
+
+- `YTDLP_COOKIES_B64` (önerilen): `cookies.txt` dosyasının Base64 hali
+- `YTDLP_COOKIES_TXT`: `cookies.txt` içeriğinin düz metni
+
+API endpoint'leri (`/api/info`, `/api/download`, `/api/download-batch`) bu env'leri otomatik kullanır.
