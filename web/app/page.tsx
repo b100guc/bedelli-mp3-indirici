@@ -39,8 +39,10 @@ export default function Home() {
   const [apiBase, setApiBase] = useState(DEFAULT_API);
   const [apiInput, setApiInput] = useState(DEFAULT_API);
   const [connected, setConnected] = useState<boolean | null>(null);
-  const [showApiSettings, setShowApiSettings] = useState(false);
+  const [polling, setPolling] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [helpCopied, setHelpCopied] = useState(false);
 
   const heroImage = useMemo(
     () => `/hero/hero-${Math.floor(Math.random() * 10) + 1}.jpg`,
@@ -57,20 +59,24 @@ export default function Home() {
     } catch {}
   }, []);
 
+  const checkHealth = async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${apiBase}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+      setConnected(res.ok);
+    } catch {
+      setConnected(false);
+    }
+  };
+
   useEffect(() => {
+    if (!polling) return;
     let cancelled = false;
     const check = async () => {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(`${apiBase}/health`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (!cancelled) setConnected(res.ok);
-      } catch {
-        if (!cancelled) setConnected(false);
-      }
+      if (cancelled) return;
+      await checkHealth();
     };
     check();
     const id = setInterval(check, 10000);
@@ -78,7 +84,7 @@ export default function Home() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [apiBase]);
+  }, [apiBase, polling]);
 
   useEffect(() => {
     if (!helpOpen) return;
@@ -97,7 +103,7 @@ export default function Home() {
         localStorage.setItem("bedelliApiBase", trimmed);
       } catch {}
     }
-    setShowApiSettings(false);
+    setPanelOpen(false);
   };
 
   const validateUrl = () => {
@@ -253,90 +259,108 @@ export default function Home() {
     <main className={styles.main}>
       <div className={styles.card}>
         <div
-          className={styles.connectionBar}
+          className={styles.panel}
           data-connected={
-            connected === true
-              ? "true"
-              : connected === false
-              ? "false"
-              : "checking"
+            connected === true ? "true" : connected === false ? "false" : "checking"
           }
         >
-          <div className={styles.connectionLeft}>
-            <span
-              className={styles.connectionDot}
-              data-connected={
-                connected === true
-                  ? "true"
-                  : connected === false
-                  ? "false"
-                  : "checking"
-              }
-            />
-            <span className={styles.connectionText}>
-              {connected === null
-                ? "Bağlantı kontrol ediliyor..."
-                : connected
-                ? `Bağlı — ${hostLabel}`
-                : "Bağlantı yok — Yerel sunucuyu başlatın"}
-            </span>
-          </div>
           <button
             type="button"
-            className={styles.connectionToggle}
-            onClick={() => setShowApiSettings(!showApiSettings)}
-            title="API ayarları"
+            className={styles.panelHeader}
+            onClick={() => setPanelOpen(!panelOpen)}
+            aria-expanded={panelOpen}
           >
-            ⚙
-          </button>
-        </div>
-
-        {showApiSettings && (
-          <div className={styles.apiSettings}>
-            <label className={styles.apiSettingsLabel}>API Adresi:</label>
-            <div className={styles.apiSettingsRow}>
-              <input
-                type="text"
-                className={styles.apiSettingsInput}
-                value={apiInput}
-                onChange={(e) => setApiInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && saveApiUrl()}
-                placeholder="http://localhost:3002"
+            <div className={styles.panelLeft}>
+              <span
+                className={styles.panelDot}
+                data-connected={
+                  connected === true ? "true" : connected === false ? "false" : "checking"
+                }
               />
-              <button
-                type="button"
-                className={styles.apiSettingsBtn}
-                onClick={saveApiUrl}
-              >
-                Kaydet
-              </button>
+              <span className={styles.panelStatus}>
+                {connected === null
+                  ? "Bağlantı kontrol ediliyor..."
+                  : connected
+                  ? `Bağlı — ${hostLabel}`
+                  : "Bağlantı yok"}
+              </span>
             </div>
-          </div>
-        )}
+            <span className={styles.panelChevron} data-open={panelOpen ? "true" : "false"}>
+              &#9662;
+            </span>
+          </button>
 
-        {connected === false && (
-          <div className={styles.cmdBox}>
-            <div className={styles.cmdHeader}>
-              <span className={styles.cmdLabel}>Sunucuyu başlatmak için terminale yapıştır:</span>
-              <button
-                type="button"
-                className={styles.cmdCopy}
-                onClick={() => {
-                  navigator.clipboard.writeText(
-                    "cd web && python -m uvicorn scripts.server:app --port 3002"
-                  );
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-              >
-                {copied ? "Kopyalandı!" : "Kopyala"}
-              </button>
+          {panelOpen && (
+            <div className={styles.panelBody}>
+              <div className={styles.panelSection}>
+                <label className={styles.panelLabel}>API Adresi</label>
+                <div className={styles.panelInputRow}>
+                  <input
+                    type="text"
+                    className={styles.panelInput}
+                    value={apiInput}
+                    onChange={(e) => setApiInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveApiUrl()}
+                    placeholder="http://localhost:3002"
+                  />
+                  <button type="button" className={styles.panelSaveBtn} onClick={saveApiUrl}>
+                    Kaydet
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.panelActions}>
+                {!connected ? (
+                  <button
+                    type="button"
+                    className={styles.panelConnectBtn}
+                    onClick={() => {
+                      setPolling(true);
+                      checkHealth();
+                    }}
+                  >
+                    Bağlan
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.panelDisconnectBtn}
+                    onClick={() => {
+                      setPolling(false);
+                      setConnected(false);
+                    }}
+                  >
+                    Bağlantıyı kes
+                  </button>
+                )}
+              </div>
+
+              {!connected && (
+                <div className={styles.panelCmd}>
+                  <div className={styles.panelCmdHeader}>
+                    <span className={styles.panelCmdLabel}>Sunucuyu başlat:</span>
+                    <button
+                      type="button"
+                      className={styles.panelCopyBtn}
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          "cd web && python -m uvicorn scripts.server:app --port 3002"
+                        );
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? "Kopyalandı!" : "Kopyala"}
+                    </button>
+                  </div>
+                  <pre className={styles.panelCmdPre}>
+                    <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
+                  </pre>
+                </div>
+              )}
             </div>
-            <pre className={styles.cmdPre}>
-              <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
-            </pre>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className={styles.hero}>
           <img
@@ -583,9 +607,24 @@ export default function Home() {
                   <b>Sunucuyu başlat</b>
                   <div className={styles.helpText}>
                     Bilgisayarınızda Python API sunucusunu çalıştırın:
-                    <pre className={styles.helpPre}>
-                      <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
-                    </pre>
+                    <div className={styles.helpCmdWrap}>
+                      <pre className={styles.helpPre}>
+                        <code>cd web &amp;&amp; python -m uvicorn scripts.server:app --port 3002</code>
+                      </pre>
+                      <button
+                        type="button"
+                        className={styles.helpCopyBtn}
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            "cd web && python -m uvicorn scripts.server:app --port 3002"
+                          );
+                          setHelpCopied(true);
+                          setTimeout(() => setHelpCopied(false), 2000);
+                        }}
+                      >
+                        {helpCopied ? "Kopyalandı!" : "Kopyala"}
+                      </button>
+                    </div>
                     Üstteki bağlantı çubuğu yeşile dönecektir.
                   </div>
                 </li>
